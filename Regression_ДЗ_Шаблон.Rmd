@@ -514,6 +514,9 @@ ft_qual <- flextable(qual_table_final) %>%
   autofit()
 ft_qual
 ```
+```{r}
+
+```
 
 
 
