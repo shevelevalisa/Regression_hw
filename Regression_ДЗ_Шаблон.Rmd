@@ -17,6 +17,17 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
 ```{r}
+library(stringr)
+library(dplyr)
+library(pheatmap)
+library(factoextra)
+library(psych)
+library(ggpubr)
+library(qgraph)
+```
+
+
+```{r}
 data <- readxl::read_excel("data./HW_data.xlsx")
 ```
 
@@ -71,7 +82,7 @@ data <- readxl::read_excel("data./HW_data.xlsx")
 
 **Итоговый набор для деконфаудинга:** Mothers education, Mothers alcohol drinking, Mothers race, Mothers Age, prenatal care\n\n
 
-**Примечания:** Можно было сконтролировать medical risk, но контролируя prenatal care мы тем самым блокируем и back-door путь для medical risk.
+**Примечания:** Можно было сконтролировать medical risk, но контролируя prenatal care мы тем самым блокируем и back-door путь для medical risk (возможно поэтому DAGitty его и не предлагает).
 Можно было также сконтролировать нейтральный переменные (Childs sex, delivery method, number of previous deliveries), которые не зависимо от того, учитываются ли они в модели или нет, не будут влиять на систематическую ошибку, но так как они все являются предшественниками исхода их контролирование может уменьшает вариацию переменной результата и тем самым, повысить точность оценки.
 Мы их, тем не менее не будем включать, чтобы не повышать количество переменных в модели, которых и так уже много.
 
@@ -143,9 +154,13 @@ data <- readxl::read_excel("data./HW_data.xlsx")
 ...
 
 ```{r}
-
+data %>% summary()
 ```
-
+```{r, ggpairs, fig.width = 9, fig.height = 9}
+data_sel <- data%>%select(dmage, dmeduc, dtotord, dlivord, monpre,  nprevist, gestat, cigar, drink, dbirwt)
+ggpairs(data_sel, 
+        progress = F)
+```
 ...
 
 <br>
