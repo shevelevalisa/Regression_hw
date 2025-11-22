@@ -19,7 +19,14 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```{r}
 data <- readxl::read_excel("data./HW_data.xlsx")
 ```
-
+```{r}
+library(psych)
+library(flextable)
+library(dplyr)
+library(tidyverse)
+library(purrr)
+library(ggplot2)
+```
 <br>
 
 # **Постановка задачи**
@@ -48,7 +55,70 @@ data <- readxl::read_excel("data./HW_data.xlsx")
 
 ## **Описательные статистики**
 
-...
+Для описания количественных переменных использовали среднее ± стандартное отклонение (СО), минимум и максимум, для описания качественных переменных - количество и %. 
+Масса тела визуализирована при помощи box-plot, а % осложнений - в виде столбчатой диаграммы. 
+
+### Демографические и социально-экономические характеристики
+Нами получены данные из случайной выборки (n=537) из когоры детей, родившихся в США в 1990 г. 
+Средний возраст матери составил 26,32 (±5,77) лет (с минимумом 15 лет и максимумом 43 года).Раса большинства женщин была white (76%), более половины женщин были не замужем (74,67%). Что касается образования, 37,8 % участниц окончили колледж, 56,8% - High School и лишь 5,4% - Elementary School. Описательная статистика по демографическим и социально-экономическим характеристикам представлена представлена в разделе 3.1 
+
+<br> 
+
+### Зависимости 
+Среди 537 женщин 81,94% женщин не курили, 98,88% не употребляли алкоголь. Среднее количество сигарет/сут среди курящих составило 13,42 (± 6,79) с минимумом 1 и максимумом 30. Среднее количество дринков среди тех, кто употреблял алкоголь, составило 2,83 (±1,72) с минимумом 1 и максимумом 6.Описательная статистика по зависимостям представлена в разделе 3.1
+
+<br> 
+
+### Осложнения со стороны матери и плода 
+Все 537 случаев родов были ассоциированы с какими-либо пороками развития у младенцев (100% случаев). При этом осложнения в родах перенесли 67,23% женщин. Зафиксирован один случай смерти новорожденного (0,19%).Описательная статистика по осложнениям представлена в разделе 3.1. 
+
+<br> 
+
+### Эффект курения
+Среди 440 некурящих женщин средняя масса тела их ребенка составила 3407.79 ± 570.46 г,а среди 97 курящих женщин - 3179.66 ± 552.93 г. Что касается осложнений в родах, среди курящих и не курящих матерей осложнения в родах перенесли приблизительно 67%. Описательная статистика по эффекту курения на количественные и качественные переменные представлена в разделе 3.1.
+Масса тела плода при рождении у некурящих и курящих матерей и осложнения в родах у некурящих и курящих матерей пердставлены на рисунках ниже. 
+
+
+```{r}
+ggplot(data, aes(x = tobacco, y = dbirwt)) +
+  geom_boxplot(fill = "lightblue") +
+  theme_minimal() +
+  labs(
+    title = "Масса тела плода при рождении у некурящих и курящих матерей",
+    x = "Курение 0-нет, 1-да",
+    y = "Масса тела плода при рождении, г"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+
+```
+```{r}
+ggplot(data, aes(x = labor, fill = tobacco)) +
+  geom_bar(aes(y = after_stat(count / sum(count))), 
+           position = "fill", alpha = 0.7) +
+  scale_y_continuous(labels = scales::percent) +
+  theme_minimal() +
+  labs(
+    title = "Осложнения в родах у некурящих и курящих матерей",
+    x = "Курение 0-нет, 1-да",
+    y = "Осложнения в родах, %"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+```
+
+
+
+```{r}
+
+
+```
 
 <br>
 
@@ -136,15 +206,356 @@ data <- readxl::read_excel("data./HW_data.xlsx")
 
 <br>
 
-# **Результаты**
+# **3 Результаты**
 
-## **Описательная статистика и эксплораторный анализ**
+## **3.1 Описательная статистика и эксплораторный анализ**
 
+### Демография и социально-экономический статус 
+```{r}
+demo1 <- data %>%
+  select(dmage) %>%
+  describe() %>%
+  as.data.frame() %>%
+  select(vars, n, mean, sd, min, max) %>%
+  mutate(across(c(mean, sd, min, max), ~round(., 2))) %>%
+  mutate(
+    Variable = as.character(vars), 
+    Category = "Mean (SD)",
+    percent = NA
+  ) %>%
+  select(-vars) 
+
+demo2 <- c("mrace3", "dmar", "dmeduc3")
+freq_table2 <- map_dfr(demo2, ~{
+  data %>%
+    count(!!sym(.x)) %>%
+    mutate(
+      percent = round(n / sum(n) * 100, 2),
+      Variable = as.character(.x),
+      Category = as.character(!!sym(.x)),
+      mean = NA, sd = NA, min = NA, max = NA
+    ) %>%
+    select(Variable, Category, n, mean, sd, min, max, percent)
+})
+
+final_table <- bind_rows(demo1, freq_table2) %>%
+  select(Variable, Category, n, percent, mean, sd, min, max)
+
+final_table_rus <- final_table %>%
+  rename(
+    'Переменная' = Variable,
+    'Категория' = Category,
+    'Количество' = n,
+    'Процент' = percent,
+    'Среднее' = mean,
+    'Ст. отклонение' = sd,
+    'Минимум' = min,
+    'Максимум' = max
+  ) %>%
+  mutate(
+    Категория = case_when(
+      Категория == "Mean (SD)" ~ "Среднее (СО)",
+      TRUE ~ Категория
+    ),
+    Переменная = case_when(
+      Переменная == "dmage" ~ "Возраст матери",
+      Переменная == "mrace3" ~ "Раса",
+      Переменная == "dmar" ~ "Семейное положение", 
+      Переменная == "dmeduc3" ~ "Образование матери",
+      TRUE ~ Переменная
+    )
+  )
+
+final_table_rus <- final_table_rus %>%
+  group_by(Переменная) %>%
+  mutate(Переменная = ifelse(row_number() == 1, Переменная, "")) %>%
+  ungroup()
+
+
+ft <- flextable(final_table_rus) %>%
+  theme_box() %>%
+  autofit()
+ft
+```
+### Зависимости 
 ...
 
 ```{r}
 
+smoke_quant <- data %>%
+  summarise(
+    cigar_n = sum(!is.na(cigar) & tobacco == 1),
+    cigar_mean = mean(cigar[tobacco == 1], na.rm = TRUE),
+    cigar_sd = sd(cigar[tobacco == 1], na.rm = TRUE),
+    cigar_min = min(cigar[tobacco == 1], na.rm = TRUE),
+    cigar_max = max(cigar[tobacco == 1], na.rm = TRUE),
+    
+    drink_n = sum(!is.na(drink) & alcohol == 1),
+    drink_mean = mean(drink[alcohol == 1], na.rm = TRUE),
+    drink_sd = sd(drink[alcohol == 1], na.rm = TRUE),
+    drink_min = min(drink[alcohol == 1], na.rm = TRUE),
+    drink_max = max(drink[alcohol == 1], na.rm = TRUE)
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "stat"),
+    names_sep = "_",
+    values_to = "value"
+  ) %>%
+  pivot_wider(
+    names_from = "stat",
+    values_from = "value"
+  ) %>%
+  mutate(
+    across(c(mean, sd, min, max), ~round(., 2)),
+    Category = "Mean (SD)",
+    percent = NA
+  ) %>%
+  select(Variable, Category, n, percent, mean, sd, min, max)
+
+smoke_qual <- c("tobacco", "alcohol")
+freq_table_smoke <- map_dfr(smoke_qual, ~{
+  data %>%
+    count(!!sym(.x)) %>%
+    mutate(
+      percent = round(n / sum(n) * 100, 2),
+      Variable = as.character(.x),
+      Category = as.character(!!sym(.x)),
+      mean = NA, sd = NA, min = NA, max = NA
+    ) %>%
+    select(Variable, Category, n, mean, sd, min, max, percent)
+})
+
+smoke_final_table <- bind_rows(smoke_quant, freq_table_smoke) %>%
+  select(Variable, Category, n, percent, mean, sd, min, max)
+
+smoke_final_table_rus <- smoke_final_table %>%
+  rename(
+    'Переменная' = Variable,
+    'Категория' = Category,
+    'Количество' = n,
+    'Процент' = percent,
+    'Среднее' = mean,
+    'Ст. отклонение' = sd,
+    'Минимум' = min,
+    'Максимум' = max
+  ) %>%
+  mutate(
+    Категория = case_when(
+      Категория == "Mean (SD)" ~ "Среднее (СО)",
+      Категория == "0" ~ "Нет",
+      Категория == "1" ~ "Да",
+      TRUE ~ Категория
+    ),
+    Переменная = case_when(
+      Переменная == "tobacco" ~ "Курение",
+      Переменная == "cigar" ~ "Сигарет в день (среди курящих)",
+      Переменная == "alcohol" ~ "Употребление алкоголя", 
+      Переменная == "drink" ~ "Дринков в день (среди пьющих)",
+      TRUE ~ Переменная
+    )
+  )
+
+smoke_final_table_rus <- smoke_final_table_rus %>%
+  group_by(Переменная) %>%
+  mutate(Переменная = ifelse(row_number() == 1, Переменная, "")) %>%
+  ungroup()
+
+ft_smoke <- flextable(smoke_final_table_rus) %>%
+  theme_box() %>%
+  autofit()
+
+ft_smoke
 ```
+### Осложнения со стороны матери и плода 
+```{r}
+
+complications_qual <- c("labor", "newborn", "congenit", "death")
+freq_table_complications <- map_dfr(complications_qual, ~{
+  data %>%
+    count(!!sym(.x)) %>%
+    mutate(
+      percent = round(n / sum(n) * 100, 2),
+      Variable = as.character(.x),
+      Category = as.character(!!sym(.x))
+    ) %>%
+    select(Variable, Category, n, percent)
+})
+
+complications_final_table_rus <- freq_table_complications %>%
+  rename(
+    'Переменная' = Variable,
+    'Категория' = Category,
+    'Количество' = n,
+    'Процент' = percent
+  ) %>%
+  mutate(
+    Категория = case_when(
+      Категория == "0" ~ "Нет",
+      Категория == "1" ~ "Да",
+      TRUE ~ Категория
+    ),
+    Переменная = case_when(
+      Переменная == "labor" ~ "Осложнения в родах",
+      Переменная == "newborn" ~ "Аномальные состояния новорожденного", 
+      Переменная == "congenit" ~ "Врожденные аномалии",
+      Переменная == "death" ~ "Смертность",
+      TRUE ~ Переменная
+    )
+  )
+
+
+complications_final_table_rus <- complications_final_table_rus %>%
+  group_by(Переменная) %>%
+  mutate(Переменная = ifelse(row_number() == 1, Переменная, "")) %>%
+  ungroup()
+
+ft_complications <- flextable(complications_final_table_rus) %>%
+  theme_box() %>%
+  autofit()
+
+ft_complications
+```
+### Эффект курения 
+```{r}
+
+quantitative_vars <- c("dmage", "dmeduc", "dtotord", "dlivord", "monpre", "cigar", "drink", 
+                      "nprevist", "gestat", "dbirwt", "aged")
+
+quant_table <- map_dfr(quantitative_vars, ~{
+  data %>%
+    group_by(tobacco) %>%
+    summarise(
+      n = sum(!is.na(!!sym(.x))),
+      mean = round(mean(!!sym(.x), na.rm = TRUE), 2),
+      sd = round(sd(!!sym(.x), na.rm = TRUE), 2),
+      .groups = 'drop'
+    ) %>%
+    mutate(
+      tobacco_group = ifelse(tobacco == 0, "Некурящие", "Курящие"),
+      value = paste0(mean, " ± ", sd),
+      Variable = .x
+    ) %>%
+    select(Variable, tobacco_group, n, value)
+}) %>%
+  pivot_wider(
+    names_from = tobacco_group,
+    values_from = c(n, value),
+    names_sep = "_"
+  ) %>%
+  mutate(
+    Variable = case_when(
+      Variable == "dmage" ~ "Возраст матери (лет)",
+      Variable == "dmeduc" ~ "Образование матери (лет)",
+      Variable == "dtotord" ~ "Количество родов",
+      Variable == "dlivord" ~ "Количество родов живым плодом",
+      Variable == "monpre" ~ "Месяц постановки на учет",
+      Variable == "cigar" ~ "Количество сигарет в день",
+      Variable == "drink" ~ "Количество дринков в день",
+      Variable == "nprevist" ~ "Количество визитов при наблюдении беременности",
+      Variable == "gestat" ~ "Гестационный возраст (недели)",
+      Variable == "dbirwt" ~ "Вес при рождении (граммы)",
+      Variable == "aged" ~ "Возраст при смерти (дни)",
+      TRUE ~ Variable
+    )
+  ) %>%
+  select(
+    Переменная = Variable,
+    `N_некурящие` = n_Некурящие,
+    `Значение_некурящие` = value_Некурящие,
+    `N_курящие` = n_Курящие,
+    `Значение_курящие` = value_Курящие
+  )
+
+ft_quant <- flextable(quant_table) %>%
+  theme_box() %>%
+  autofit()
+ft_quant
+
+
+qualitative_vars <- c("mrace3", "dmar", "dmeduc3", "adequacy", "medrisk", 
+                     "alcohol", "pldel", "delmeth", "csex", "labor", 
+                     "newborn", "congenit", "death")
+
+create_qual_table <- function(var_name) {
+  data %>%
+    group_by(tobacco, !!sym(var_name)) %>%
+    summarise(n = n(), .groups = 'drop') %>%
+    group_by(tobacco) %>%
+    mutate(percent = round(n / sum(n) * 100, 2)) %>%
+    ungroup() %>%
+    mutate(
+      tobacco_group = ifelse(tobacco == 0, "Некурящие", "Курящие"),
+      category = as.character(!!sym(var_name)),
+      Variable = var_name
+    ) %>%
+    select(Variable, category, tobacco_group, n, percent)
+}
+
+qual_table <- map_dfr(qualitative_vars, create_qual_table) %>%
+  pivot_wider(
+    names_from = tobacco_group,
+    values_from = c(n, percent),
+    names_sep = "_"
+  ) %>%
+  mutate(
+    `Некурящие` = ifelse(is.na(n_Некурящие), "0", 
+                        paste0(n_Некурящие, " (", percent_Некурящие, "%)")),
+    `Курящие` = ifelse(is.na(n_Курящие), "0", 
+                      paste0(n_Курящие, " (", percent_Курящие, "%)"))
+  ) %>%
+  mutate(
+    Variable = case_when(
+      Variable == "mrace3" ~ "Раса",
+      Variable == "dmar" ~ "Замужество",
+      Variable == "dmeduc3" ~ "Образование",
+      Variable == "adequacy" ~ "Адекватность наблюдения",
+      Variable == "medrisk" ~ "Медицинские факторы риска",
+      Variable == "alcohol" ~ "Употребление алкоголя",
+      Variable == "pldel" ~ "Место родов",
+      Variable == "delmeth" ~ "Метод родоразрешения",
+      Variable == "csex" ~ "Пол ребенка",
+      Variable == "labor" ~ "Осложнения в родах",
+      Variable == "newborn" ~ "Аномалии новорожденного",
+      Variable == "congenit" ~ "Врожденные аномалии",
+      Variable == "death" ~ "Смертность",
+      TRUE ~ Variable
+    ),
+    category = case_when(
+      category == "0" ~ "Нет",
+      category == "1" ~ "Да",
+      TRUE ~ category
+    )
+  ) %>%
+  select(
+    Переменная = Variable,
+    Категория = category,
+    Некурящие,
+    Курящие
+  )
+
+qual_table_final <- qual_table %>%
+  group_by(Переменная) %>%
+  mutate(Переменная = ifelse(row_number() == 1, Переменная, "")) %>%
+  ungroup()
+
+
+ft_qual <- flextable(qual_table_final) %>%
+  theme_box() %>%
+  autofit()
+ft_qual
+```
+```{r}
+
+```
+
+```{r}
+
+```
+```{r}
+
+```
+
 
 ...
 
